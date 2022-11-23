@@ -314,6 +314,7 @@ class BarChartPainter extends AxisChartPainter<BarChartData> {
     final viewSize = canvasWrapper.size;
 
     const textsBelowMargin = 4;
+    const extraSpace = 10;
 
     final tooltipItem = tooltipData.getTooltipItem(
       showOnBarGroup,
@@ -350,7 +351,8 @@ class BarChartPainter extends AxisChartPainter<BarChartData> {
     /// sum up all Texts height, then we should
     /// draw the tooltip's height as tall as sumTextsHeight
     final textWidth = drawingTextPainter.width;
-    final textHeight = drawingTextPainter.height + textsBelowMargin;
+    final textHeight =
+        drawingTextPainter.height + textsBelowMargin - extraSpace;
 
     /// if we have multiple bar lines,
     /// there are more than one FlCandidate on touch area,
@@ -379,7 +381,7 @@ class BarChartPainter extends AxisChartPainter<BarChartData> {
       barOffset.dx - (tooltipWidth / 2),
       tooltipTop,
       tooltipWidth,
-      tooltipHeight,
+      tooltipHeight + extraSpace,
     );
 
     if (tooltipData.fitInsideHorizontally) {
@@ -457,6 +459,55 @@ class BarChartPainter extends AxisChartPainter<BarChartData> {
         ..strokeWidth = tooltipData.tooltipBorder.width;
     }
 
+    final trianglePainter = Paint()
+      ..color = tooltipData.tooltipBgColor
+      ..strokeWidth = 5
+      ..style = PaintingStyle.fill
+      ..strokeCap = StrokeCap.round;
+
+    final trianglePath = Path();
+    const angle = (pi * 2) / 3;
+    const triangleRadius = 10;
+    const triangleRadians = 1.6;
+
+    final center = Offset((rect.left + rect.right) / 2, rect.bottom);
+    final startPoint = Offset(
+      triangleRadius * cos(triangleRadians),
+      triangleRadius * sin(triangleRadians),
+    );
+
+    trianglePath.moveTo(startPoint.dx + center.dx, startPoint.dy + center.dy);
+
+    for (var i = 1; i <= 3; i++) {
+      final x = triangleRadius * cos(triangleRadians + angle * i) + center.dx;
+      final y = triangleRadius * sin(triangleRadians + angle * i) + center.dy;
+      trianglePath.lineTo(x, y);
+    }
+    trianglePath.close();
+
+    // final shadowPath = RRect.fromRectAndRadius(rect, radius);
+
+    // final shadowPaint = Paint()
+    //   ..strokeWidth = 3
+    //   ..color = const Color.fromRGBO(0, 0, 0, 0.25)
+    //   ..style = PaintingStyle.stroke
+    //   ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+
+    final shadowPath = Path()
+      ..moveTo(rect.left, rect.top)
+      ..lineTo(rect.right, rect.top)
+      ..lineTo(rect.right, rect.bottom)
+      ..moveTo(rect.left, rect.bottom)
+      ..moveTo(rect.left, rect.top)
+      ..close();
+
+    canvasWrapper.canvas.drawShadow(
+      shadowPath,
+      Colors.black,
+      15,
+      true,
+    );
+
     canvasWrapper.drawRotated(
       size: rect.size,
       rotationOffset: rectRotationOffset,
@@ -466,6 +517,11 @@ class BarChartPainter extends AxisChartPainter<BarChartData> {
         canvasWrapper
           ..drawRRect(roundedRect, _bgTouchTooltipPaint)
           ..drawRRect(roundedRect, _borderTouchTooltipPaint)
+          // ..drawRRect(shadowPath, shadowPaint)
+          ..drawPath(
+            trianglePath,
+            trianglePainter,
+          )
           ..drawText(tp, drawOffset);
       },
     );
